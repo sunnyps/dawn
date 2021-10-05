@@ -1,0 +1,16 @@
+group("jpeg") {
+  public_deps = [ ":view_jpeg" ]
+}
+
+executable("view_jpeg") {
+  sources = [
+    "hardware_decode_jpeg.cc",
+    "hardware_decode_jpeg.h",
+    "jpeg_data.cc",
+    "jpeg_data.h",
+    "software_decode_jpeg.cc",
+    "software_decode_jpeg.h",
+    "view_jpeg.cc",
+  ]
+  deps = [ "//examples:dawn_sample_utils" ]
+}

@@ -22,6 +22,7 @@ group("dawn_samples") {
     ":CppHelloTriangle",
     ":CubeReflection",
     ":ManualSwapChainTest",
+    "//examples/jpeg",
   ]
 }
 
