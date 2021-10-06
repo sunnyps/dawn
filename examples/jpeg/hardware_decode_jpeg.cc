@@ -86,7 +86,7 @@ wgpu::TextureView HardwareDecodeJpeg(wgpu::Device device, const JpegData& jpeg) 
             return;
           }
 
-          let block_base_data_index = block_id.x * 8u + block_id.y * params.width * 8u;
+          let block_base_data_index = (block_id.x * 8u + block_id.y * params.width) * 8u;
           var y_sum: f32 = 0.0;
           var cb_sum: f32 = 0.0;
           var cr_sum: f32 = 0.0;
