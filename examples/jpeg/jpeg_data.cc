@@ -377,7 +377,7 @@ class JpegLoader {
                     break;
 
                 default:
-                    std::cout << "Unknown segment type: " << marker << "\n";
+                    std::cout << "Unknown segment type: " << std::hex << "0x" << marker << "\n";
                     break;
             }
         }
