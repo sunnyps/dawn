@@ -54,15 +54,15 @@ class HuffmanTable {
     uint8_t GetCode(ScanDataStream& stream) const;
 
   private:
-    struct Entry {
-        bool is_list = false;
-        std::vector<Entry> elements;
-        uint8_t value;
+    struct Node {
+        bool is_leaf = false;
+        uint8_t value = 0;
+        std::vector<Node> children;
     };
 
-    static bool Build(Entry& root, uint8_t element, size_t pos);
+    static bool Build(Node& root, uint8_t value, size_t code_length);
 
-    Entry root_;
+    Node root_;
 };
 
 struct ScanComponentInfo {

@@ -212,7 +212,7 @@ uint8_t ScanDataStream::ReadBit() {
     if (bit_offset_ == 8) {
         current_byte_ = view_.ReadByte();
         if (current_byte_ == 0xff) {
-            assert(view.bytes_remaining() >= 1);
+            assert(view_.bytes_remaining() >= 1);
             uint8_t zero = view_.ReadByte();
             (void)zero;
             assert(zero == 0);
@@ -235,45 +235,45 @@ uint32_t ScanDataStream::ReadBits(size_t num_bits) {
 }
 
 HuffmanTable::HuffmanTable(uint8_t lengths[16], const std::vector<uint8_t>& elements) {
-    root_.is_list = true;
     auto element_it = elements.begin();
     for (size_t i = 0; i < 16; ++i) {
         for (size_t j = 0; j < lengths[i]; ++j) {
-            Build(root_, *element_it++, i);
+            Build(root_, *element_it++, i + 1);
         }
     }
 }
 
 uint8_t HuffmanTable::GetCode(ScanDataStream& stream) const {
-    const Entry* r = &root_;
-    while (r->is_list) {
-        r = &r->elements[stream.ReadBit()];
+    const Node* node = &root_;
+    while (!node->is_leaf) {
+        uint8_t bit = stream.ReadBit();
+        assert(bit <= 1);
+        if (bit >= node->children.size()) {
+            std::cerr << "missing huffman code\n";
+            return 0;
+        }
+        node = &node->children[bit];
     }
-    return r->value;
+    return node->value;
 }
 
 // static
-bool HuffmanTable::Build(Entry& root, uint8_t element, size_t pos) {
-    if (root.is_list) {
-        if (pos == 0) {
-            if (root.elements.size() < 2) {
-                Entry e;
-                e.value = element;
-                root.elements.push_back(e);
-                return true;
-            }
-            return false;
-        }
+bool HuffmanTable::Build(Node& node, uint8_t value, size_t code_length) {
+    if (node.is_leaf)
+        return false;
 
-        for (size_t i = 0; i <= 1; ++i) {
-            if (root.elements.size() == i) {
-                Entry e;
-                e.is_list = true;
-                root.elements.push_back(e);
-            }
-            if (Build(root.elements[i], element, pos - 1)) {
-                return true;
-            }
+    if (code_length == 0) {
+        node.is_leaf = true;
+        node.value = value;
+        return true;
+    }
+
+    for (size_t i = 0; i < 2; ++i) {
+        if (i >= node.children.size()) {
+            node.children.emplace_back();
+        }
+        if (Build(node.children.back(), value, code_length - 1)) {
+            return true;
         }
     }
 
