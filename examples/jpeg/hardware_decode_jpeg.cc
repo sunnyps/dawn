@@ -7,34 +7,22 @@
 #include "examples/jpeg/hardware_decode_jpeg.h"
 #include "utils/WGPUHelpers.h"
 
-std::vector<int32_t> FlattenDCTBlocks(const IntBlockList& blocks) {
-    std::vector<int32_t> data;
-    data.resize(blocks.size() * 64);
-    int32_t* out_data = data.data();
-    for (const IntBlock& block : blocks) {
-        memcpy(out_data, block.data(), block.size() * sizeof(int32_t));
-        out_data += block.size();
-    }
-    return data;
-}
-
 wgpu::TextureView HardwareDecodeJpeg(wgpu::Device device, const JpegData& jpeg) {
     // TODO: Move YUV conversion, IDCT computation, and maybe DCT decode into compute stages.
 
     IntBlockMap dct_blocks = DecodeDCTBlocks(jpeg);
 
-    std::vector<int32_t> y = FlattenDCTBlocks(dct_blocks[1]);
-    std::vector<int32_t> cr = FlattenDCTBlocks(dct_blocks[2]);
-    std::vector<int32_t> cb = FlattenDCTBlocks(dct_blocks[3]);
-
+    const auto& y = dct_blocks[1];
+    const auto& cb = dct_blocks[2];
+    const auto& cr = dct_blocks[3];
     wgpu::Buffer uniforms =
         utils::CreateBufferFromData(device, wgpu::BufferUsage::Uniform, {jpeg.width, jpeg.height});
     wgpu::Buffer y_dct_data = utils::CreateBufferFromData(
-        device, y.data(), y.size() * sizeof(int32_t), wgpu::BufferUsage::Storage);
+        device, y.data(), y.size() * sizeof(int32_t) * 64, wgpu::BufferUsage::Storage);
     wgpu::Buffer cr_dct_data = utils::CreateBufferFromData(
-        device, cr.data(), cr.size() * sizeof(int32_t), wgpu::BufferUsage::Storage);
+        device, cr.data(), cr.size() * sizeof(int32_t) * 64, wgpu::BufferUsage::Storage);
     wgpu::Buffer cb_dct_data = utils::CreateBufferFromData(
-        device, cb.data(), cb.size() * sizeof(int32_t), wgpu::BufferUsage::Storage);
+        device, cb.data(), cb.size() * sizeof(int32_t) * 64, wgpu::BufferUsage::Storage);
 
     wgpu::TextureDescriptor descriptor;
     descriptor.dimension = wgpu::TextureDimension::e2D;
@@ -106,10 +94,7 @@ wgpu::TextureView HardwareDecodeJpeg(wgpu::Device device, const JpegData& jpeg) 
             let row_coefficient = kIDCTCoefficients[local_id.y + y * 8u];
             for (var x: u32 = 0u; x < 8u; x = x + 1u) {
               let block_index = x + y * 8u;
-              let zigzagged_block_index = kZigZagTable[block_index];
-              let zigzagged_x = zigzagged_block_index & 7u;
-              let zigzagged_y = zigzagged_block_index / 8u;
-              let data_index = block_base_data_index + zigzagged_x + zigzagged_y * params.width;
+              let data_index = block_base_data_index + kZigZagTable[block_index];
               let c = row_coefficient * kIDCTCoefficients[local_id.x + x * 8u];
               y_sum = fma(f32(y_dct.data[data_index]), c, y_sum);
               cb_sum = fma(f32(cb_dct.data[data_index]), c, cb_sum);

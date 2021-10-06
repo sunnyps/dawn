@@ -77,7 +77,7 @@ struct ScanData {
     std::vector<uint8_t> coded_data;
 };
 
-using IntBlock = std::array<int, 64>;
+using IntBlock = std::array<int32_t, 64>;
 using IntBlockList = std::vector<IntBlock>;
 using IntBlockMap = std::map<uint8_t, IntBlockList>;
 
