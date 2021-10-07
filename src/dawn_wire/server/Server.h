@@ -150,7 +150,8 @@ namespace dawn_wire { namespace server {
       public:
         Server(const DawnProcTable& procs,
                CommandSerializer* serializer,
-               MemoryTransferService* memoryTransferService);
+               MemoryTransferService* memoryTransferService,
+               DebugErrorHandler* debugErrorHandler);
         ~Server() override;
 
         // ChunkedCommandHandler implementation
@@ -222,8 +223,10 @@ namespace dawn_wire { namespace server {
         DawnProcTable mProcs;
         std::unique_ptr<MemoryTransferService> mOwnedMemoryTransferService = nullptr;
         MemoryTransferService* mMemoryTransferService = nullptr;
+        DebugErrorHandler* mDebugErrorHandler = nullptr;
 
         std::shared_ptr<bool> mIsAlive;
+        std::vector<uint8_t> mDebugData;
     };
 
     bool TrackDeviceChild(DeviceInfo* device, ObjectType type, ObjectId id);

@@ -90,6 +90,7 @@ dawn_component("dawn_wire") {
     "server/Server.cpp",
     "server/Server.h",
     "server/ServerBuffer.cpp",
+    "server/ServerDebug.cpp",
     "server/ServerDevice.cpp",
     "server/ServerInlineMemoryTransferService.cpp",
     "server/ServerQueue.cpp",

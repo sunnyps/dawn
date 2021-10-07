@@ -43,8 +43,8 @@ namespace dawn_wire { namespace client {
 
     }  // anonymous namespace
 
-    Client::Client(CommandSerializer* serializer, MemoryTransferService* memoryTransferService)
-        : ClientBase(), mSerializer(serializer), mMemoryTransferService(memoryTransferService) {
+    Client::Client(CommandSerializer* serializer, MemoryTransferService* memoryTransferService, DebugDataProvider* debugDataProvider)
+        : ClientBase(), mSerializer(serializer), mMemoryTransferService(memoryTransferService), mDebugDataProvider(debugDataProvider) {
         if (mMemoryTransferService == nullptr) {
             // If a MemoryTransferService is not provided, fall back to inline memory.
             mOwnedMemoryTransferService = CreateInlineMemoryTransferService();
@@ -116,6 +116,14 @@ namespace dawn_wire { namespace client {
         result.id = allocation->object->id;
         result.generation = allocation->generation;
         return result;
+    }
+
+    void Client::SerializeDebugData() {
+        auto debugData = mDebugDataProvider->GetDebugData();
+        SetDebugDataCmd cmd;
+        cmd.dataSize = debugData.size();
+        cmd.data = &debugData.front();
+        mSerializer.SerializeCommand(cmd, *this);
     }
 
     void Client::ReclaimTextureReservation(const ReservedTexture& reservation) {

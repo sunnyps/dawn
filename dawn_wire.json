@@ -84,6 +84,10 @@
         "shader module get compilation info": [
             { "name": "shader module id", "type": "ObjectId" },
             { "name": "request serial", "type": "uint64_t" }
+        ],
+        "set debug data": [
+            {"name": "data", "type": "uint8_t", "annotation": "const*", "length": "data size"},
+            {"name": "data size", "type": "uint64_t"}
         ]
     },
     "return commands": {

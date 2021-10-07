@@ -52,9 +52,15 @@ namespace dawn_wire {
         uint32_t generation;
     };
 
+    class DebugDataProvider {
+      public:
+        virtual std::vector<uint8_t> GetDebugData() = 0;
+    };
+
     struct DAWN_WIRE_EXPORT WireClientDescriptor {
         CommandSerializer* serializer;
         client::MemoryTransferService* memoryTransferService = nullptr;
+        DebugDataProvider* debugDataProvider = nullptr;
     };
 
     class DAWN_WIRE_EXPORT WireClient : public CommandHandler {

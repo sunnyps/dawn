@@ -33,7 +33,7 @@ namespace dawn_wire { namespace client {
 
     class Client : public ClientBase {
       public:
-        Client(CommandSerializer* serializer, MemoryTransferService* memoryTransferService);
+        Client(CommandSerializer* serializer, MemoryTransferService* memoryTransferService, DebugDataProvider* debugDataProvider);
         ~Client() override;
 
         // ChunkedCommandHandler implementation
@@ -54,6 +54,8 @@ namespace dawn_wire { namespace client {
 
         template <typename Cmd>
         void SerializeCommand(const Cmd& cmd) {
+            if (mDebugDataProvider)
+                SerializeDebugData();
             mSerializer.SerializeCommand(cmd, *this);
         }
 
@@ -61,6 +63,8 @@ namespace dawn_wire { namespace client {
         void SerializeCommand(const Cmd& cmd,
                               size_t extraSize,
                               ExtraSizeSerializeFn&& SerializeExtraSize) {
+            if (mDebugDataProvider)
+                SerializeDebugData();
             mSerializer.SerializeCommand(cmd, *this, extraSize, SerializeExtraSize);
         }
 
@@ -74,12 +78,14 @@ namespace dawn_wire { namespace client {
 
       private:
         void DestroyAllObjects();
+        void SerializeDebugData();
 
 #include "dawn_wire/client/ClientPrototypes_autogen.inc"
 
         ChunkedCommandSerializer mSerializer;
         WireDeserializeAllocator mAllocator;
         MemoryTransferService* mMemoryTransferService = nullptr;
+        DebugDataProvider* mDebugDataProvider = nullptr;
         std::unique_ptr<MemoryTransferService> mOwnedMemoryTransferService = nullptr;
 
         PerObjectType<LinkedList<ObjectBase>> mObjects;

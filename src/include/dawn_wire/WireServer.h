@@ -28,10 +28,17 @@ namespace dawn_wire {
         class MemoryTransferService;
     }  // namespace server
 
+    class DebugErrorHandler {
+      public:
+        virtual void OnError(const std::vector<uint8_t>& debugData,
+                             const char* command_name);
+    };
+
     struct DAWN_WIRE_EXPORT WireServerDescriptor {
         const DawnProcTable* procs;
         CommandSerializer* serializer;
         server::MemoryTransferService* memoryTransferService = nullptr;
+        DebugErrorHandler* debugErrorHandler = nullptr;
     };
 
     class DAWN_WIRE_EXPORT WireServer : public CommandHandler {

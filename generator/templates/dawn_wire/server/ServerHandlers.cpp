@@ -88,6 +88,9 @@ namespace dawn_wire { namespace server {
                 {%- endfor -%}
             );
 
+                if (mDebugErrorHandler)
+                    mDebugErrorHandler->OnError(
+                        mDebugData, "{{Suffix}}");
             if (!success) {
                 return false;
             }

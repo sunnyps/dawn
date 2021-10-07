@@ -19,10 +19,12 @@ namespace dawn_wire { namespace server {
 
     Server::Server(const DawnProcTable& procs,
                    CommandSerializer* serializer,
-                   MemoryTransferService* memoryTransferService)
+                   MemoryTransferService* memoryTransferService,
+                   DebugErrorHandler* debugErrorHandler)
         : mSerializer(serializer),
           mProcs(procs),
           mMemoryTransferService(memoryTransferService),
+          mDebugErrorHandler(debugErrorHandler),
           mIsAlive(std::make_shared<bool>(true)) {
         if (mMemoryTransferService == nullptr) {
             // If a MemoryTransferService is not provided, fallback to inline memory.
