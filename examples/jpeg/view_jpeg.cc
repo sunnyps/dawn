@@ -1,11 +1,15 @@
+#include <cstdint>
+#include <fstream>
 #include <iostream>
+#include <memory>
+#include <vector>
 
 #include "GLFW/glfw3.h"
 
 #include "examples/SampleUtils.h"
-#include "examples/jpeg/hardware_decode_jpeg.h"
-#include "examples/jpeg/jpeg_data.h"
-#include "examples/jpeg/software_decode_jpeg.h"
+#include "examples/jpeg/hardware_jpeg_decoder.h"
+#include "examples/jpeg/jpeg_decoder.h"
+#include "examples/jpeg/software_jpeg_decoder.h"
 #include "utils/ComboRenderPipelineDescriptor.h"
 #include "utils/ScopedAutoreleasePool.h"
 #include "utils/SystemUtils.h"
@@ -66,23 +70,32 @@ wgpu::RenderPipeline CreateRenderPipeline(wgpu::Device device) {
     return device.CreateRenderPipeline(&descriptor);
 }
 
+std::vector<uint8_t> ReadFile(const char* filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (file.is_open()) {
+        return std::vector<uint8_t>(std::istreambuf_iterator<char>(file), {});
+    }
+    return {};
+}
+
 // Computes rendered quad size based on image size and window size. This stretches the quad to fit
 // the largest window dimension possible while preserving the image's aspect ratio.
 void UpdateRenderDimensions(wgpu::Queue queue,
                             wgpu::Buffer uniforms,
-                            const JpegData& jpeg,
+                            int width,
+                            int height,
                             int window_width,
                             int window_height) {
-    const float x_stretch = static_cast<float>(window_width) / jpeg.width;
-    const float y_stretch = static_cast<float>(window_height) / jpeg.height;
+    const float x_stretch = static_cast<float>(window_width) / width;
+    const float y_stretch = static_cast<float>(window_height) / height;
     float dimensions[2];
-    if (x_stretch * jpeg.height <= window_height) {
+    if (x_stretch * height <= window_height) {
         dimensions[0] = 1.0f;
-        dimensions[1] = x_stretch * static_cast<float>(jpeg.height * jpeg.height) /
-                        static_cast<float>(jpeg.width * window_height);
+        dimensions[1] = x_stretch * static_cast<float>(height * height) /
+                        static_cast<float>(width * window_height);
     } else {
-        dimensions[0] = y_stretch * static_cast<float>(jpeg.width * jpeg.width) /
-                        static_cast<float>(jpeg.height * window_width);
+        dimensions[0] = y_stretch * static_cast<float>(width * width) /
+                        static_cast<float>(height * window_width);
         dimensions[1] = 1.0f;
     }
     queue.WriteBuffer(uniforms, 0, reinterpret_cast<uint8_t*>(&dimensions[0]), sizeof(dimensions));
@@ -111,23 +124,12 @@ int main(int argc, const char* argv[]) {
     wgpu::Device device = CreateCppDawnDevice();
     wgpu::Queue queue = device.GetQueue();
 
-    const char* filename = argv[argc - 1];
-    JpegData jpeg;
-    if (!LoadJpeg(filename, jpeg)) {
-        std::cerr << "Failed to read JPEG data.\n";
-        return 1;
-    }
-
+    std::unique_ptr<JpegDecoder> decoder;
     const bool use_software = force_software || !force_hardware;
-    wgpu::TextureView decoded_image;
     if (use_software) {
-        decoded_image = SoftwareDecodeJpeg(device, jpeg);
+        decoder = std::make_unique<SoftwareJpegDecoder>(device);
     } else {
-        decoded_image = HardwareDecodeJpeg(device, jpeg);
-    }
-    if (!decoded_image) {
-        std::cerr << "Failed to decode!\n";
-        return 1;
+        decoder = std::make_unique<HardwareJpegDecoder>(device);
     }
 
     wgpu::Buffer render_uniforms = utils::CreateBufferFromData(
@@ -135,19 +137,36 @@ int main(int argc, const char* argv[]) {
 
     wgpu::SwapChain swapchain = GetSwapChain(device);
     wgpu::RenderPipeline render_pipeline = CreateRenderPipeline(device);
-    wgpu::BindGroup bg = utils::MakeBindGroup(device, render_pipeline.GetBindGroupLayout(0),
-                                              {
-                                                  {0, render_uniforms},
-                                                  {1, decoded_image},
-                                                  {2, device.CreateSampler()},
-                                              });
 
     swapchain.Configure(GetPreferredSwapChainTextureFormat(), wgpu::TextureUsage::RenderAttachment,
-                        1024, 768);
+                        640, 480);
+
+    std::vector<uint8_t> raw_jpeg_data = ReadFile(argv[argc - 1]);
+    if (raw_jpeg_data.empty()) {
+      std::cerr << "nah\n";
+      return 1;
+    }
+
+    wgpu::Sampler sampler = device.CreateSampler();
 
     int last_window_width = 0;
     int last_window_height = 0;
     while (!ShouldQuit()) {
+        int width;
+        int height;
+        wgpu::TextureView decoded_image = decoder->Decode(raw_jpeg_data, &width, &height);
+        if (!decoded_image) {
+            std::cerr << "Failed to decode!\n";
+            return 1;
+        }
+
+        wgpu::BindGroup bg = utils::MakeBindGroup(device, render_pipeline.GetBindGroupLayout(0),
+                                                  {
+                                                      {0, render_uniforms},
+                                                      {1, decoded_image},
+                                                      {2, sampler},
+                                                  });
+
         utils::ScopedAutoreleasePool pool;
 
         int window_width, window_height;
@@ -159,7 +178,7 @@ int main(int argc, const char* argv[]) {
             swapchain.Configure(GetPreferredSwapChainTextureFormat(),
                                 wgpu::TextureUsage::RenderAttachment, last_window_width,
                                 last_window_height);
-            UpdateRenderDimensions(queue, render_uniforms, jpeg, window_width, window_height);
+            UpdateRenderDimensions(queue, render_uniforms, width, height, window_width, window_height);
         }
 
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();

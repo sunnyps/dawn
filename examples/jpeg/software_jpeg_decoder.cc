@@ -1,12 +1,25 @@
-#include "examples/jpeg/software_decode_jpeg.h"
+#include "examples/jpeg/software_jpeg_decoder.h"
 
 #include <cstdint>
-
+#include <iostream>
 #include <dawn/webgpu_cpp.h>
 
 #include "examples/jpeg/jpeg_data.h"
 
-wgpu::TextureView SoftwareDecodeJpeg(wgpu::Device device, const JpegData& jpeg) {
+SoftwareJpegDecoder::SoftwareJpegDecoder(wgpu::Device device)
+    : device_(device) {}
+
+SoftwareJpegDecoder::~SoftwareJpegDecoder() = default;
+
+wgpu::TextureView SoftwareJpegDecoder::Decode(std::vector<uint8_t> data, int* width, int* height) {
+    JpegData jpeg;
+    if (!ParseJpegData(std::move(data), jpeg)) {
+      return {};
+    }
+
+    *width = static_cast<int>(jpeg.width);
+    *height = static_cast<int>(jpeg.height);
+
     IntBlockMap dct_blocks = DecodeDCTBlocks(jpeg);
     IntBlockMap color_blocks = PerformIDCT(dct_blocks);
 
@@ -22,7 +35,7 @@ wgpu::TextureView SoftwareDecodeJpeg(wgpu::Device device, const JpegData& jpeg) 
     descriptor.format = wgpu::TextureFormat::RGBA8Unorm;
     descriptor.mipLevelCount = 1;
     descriptor.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
-    wgpu::Texture texture = device.CreateTexture(&descriptor);
+    wgpu::Texture texture = device_.CreateTexture(&descriptor);
 
     wgpu::ImageCopyTexture destination;
     destination.texture = texture;
@@ -35,7 +48,7 @@ wgpu::TextureView SoftwareDecodeJpeg(wgpu::Device device, const JpegData& jpeg) 
     extent.width = jpeg.width;
     extent.height = jpeg.height;
 
-    device.GetQueue().WriteTexture(&destination, rgba.data(), rgba.size() * sizeof(uint32_t),
-                                   &layout, &extent);
+    device_.GetQueue().WriteTexture(&destination, rgba.data(), rgba.size() * sizeof(uint32_t),
+                                    &layout, &extent);
     return texture.CreateView();
 }

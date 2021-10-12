@@ -93,7 +93,7 @@ struct JpegData {
     std::vector<ScanData> scan_data_blocks;
 };
 
-bool LoadJpeg(const char* filename, JpegData& jpeg);
+bool ParseJpegData(std::vector<uint8_t> raw_data, JpegData& jpeg);
 
 ///// Helpers for different phases of decoding which may be replaceable with GPU work.
 

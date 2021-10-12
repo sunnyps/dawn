@@ -1,6 +1,5 @@
 #include <cassert>
 #include <cmath>
-#include <fstream>
 #include <iostream>
 #include <map>
 
@@ -282,14 +281,10 @@ bool HuffmanTable::Build(Node& node, uint8_t value, size_t code_length) {
 
 class JpegLoader {
   public:
-    explicit JpegLoader(const char* filename) : data_(ReadFile(filename)), view_(data_) {
-    }
+    explicit JpegLoader(std::vector<uint8_t> raw_data)
+        : data_(std::move(raw_data)), view_(data_) {}
 
     bool Load(JpegData& jpeg) {
-        if (!file_exists_) {
-            return false;
-        }
-
         FrameInfo frame;
         while (view_.bytes_remaining() >= 2) {
             const uint16_t marker = view_.ReadUint16();
@@ -373,11 +368,9 @@ class JpegLoader {
                     return false;
 
                 case kMarker_Comment:
-                    std::cout << "Comment: " << segment_view.AsString() << std::endl;
                     break;
 
                 default:
-                    std::cout << "Unknown segment type: " << std::hex << "0x" << marker << "\n";
                     break;
             }
         }
@@ -389,22 +382,12 @@ class JpegLoader {
     }
 
   private:
-    std::vector<uint8_t> ReadFile(const char* filename) {
-        std::ifstream file(filename, std::ios::binary);
-        if (file.is_open()) {
-            file_exists_ = true;
-            return std::vector<uint8_t>(std::istreambuf_iterator<char>(file), {});
-        }
-        return {};
-    }
-
-    bool file_exists_ = false;
     const std::vector<uint8_t> data_;
     DataView view_;
 };
 
-bool LoadJpeg(const char* filename, JpegData& jpeg) {
-    return JpegLoader(filename).Load(jpeg);
+bool ParseJpegData(std::vector<uint8_t> raw_data, JpegData& jpeg) {
+    return JpegLoader(std::move(raw_data)).Load(jpeg);
 }
 
 int32_t DecodeNumber(uint8_t code, uint32_t bits) {
