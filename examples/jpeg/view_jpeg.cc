@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -14,6 +15,13 @@
 #include "utils/ScopedAutoreleasePool.h"
 #include "utils/SystemUtils.h"
 #include "utils/WGPUHelpers.h"
+
+static int64_t NanoNow() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+             std::chrono::system_clock::now() -
+             std::chrono::system_clock::from_time_t(0))
+      .count();
+}
 
 // Creates a simple render pipeline to render a textured quad with a UBO-given size.
 wgpu::RenderPipeline CreateRenderPipeline(wgpu::Device device) {
@@ -154,6 +162,7 @@ int main(int argc, const char* argv[]) {
     while (!ShouldQuit()) {
         int width;
         int height;
+        int64_t start = NanoNow();
         wgpu::TextureView decoded_image = decoder->Decode(raw_jpeg_data, &width, &height);
         if (!decoded_image) {
             std::cerr << "Failed to decode!\n";
@@ -193,6 +202,8 @@ int main(int argc, const char* argv[]) {
 
         swapchain.Present();
         DoFlush();
+        int64_t end = NanoNow();
+        std::cout << "decode and present took " << ((end - start) / 1000) << " μs\n";
         utils::USleep(16000);
     }
 
