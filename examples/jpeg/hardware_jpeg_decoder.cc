@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstring>
+#include <iostream>
 #include <vector>
 
 #include <dawn/webgpu_cpp.h>
@@ -7,6 +8,7 @@
 #include "examples/jpeg/hardware_jpeg_decoder.h"
 
 #include "examples/jpeg/jpeg_data.h"
+#include "examples/jpeg/timer.h"
 #include "utils/WGPUHelpers.h"
 
 HardwareJpegDecoder::HardwareJpegDecoder(wgpu::Device device)
@@ -102,9 +104,12 @@ HardwareJpegDecoder::~HardwareJpegDecoder() = default;
 
 wgpu::TextureView HardwareJpegDecoder::Decode(std::vector<uint8_t> data, int* width, int* height) {
     JpegData jpeg;
+    Timer timer;
     if (!ParseJpegData(std::move(data), jpeg)) {
       return {};
     }
+    std::cout << "basic parsing: " << timer.ToStringMicro() << std::endl;
+    timer.Reset();
 
     *width = static_cast<int>(jpeg.width);
     *height = static_cast<int>(jpeg.height);
@@ -112,7 +117,8 @@ wgpu::TextureView HardwareJpegDecoder::Decode(std::vector<uint8_t> data, int* wi
     // TODO: Move YUV conversion, IDCT computation, and maybe DCT decode into compute stages.
 
     IntBlockMap dct_blocks = DecodeDCTBlocks(jpeg);
-
+    std::cout << "huffman decode : " << timer.ToStringMicro() << std::endl;
+    timer.Reset();
     const auto& y = dct_blocks[1];
     const auto& cb = dct_blocks[2];
     const auto& cr = dct_blocks[3];
@@ -147,6 +153,7 @@ wgpu::TextureView HardwareJpegDecoder::Decode(std::vector<uint8_t> data, int* wi
                                                    {1, cb_dct_data},
                                                    {2, cr_dct_data},
                                                });
+    std::cout << "gpu object setup: " << timer.ToStringMicro() << std::endl;
 
     wgpu::CommandEncoder encoder = device_.CreateCommandEncoder();
     wgpu::ComputePassEncoder pass = encoder.BeginComputePass();

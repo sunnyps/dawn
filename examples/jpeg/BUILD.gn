@@ -11,7 +11,12 @@ executable("view_jpeg") {
     "jpeg_decoder.h",
     "software_jpeg_decoder.cc",
     "software_jpeg_decoder.h",
+    "timer.cc",
+    "timer.h",
     "view_jpeg.cc",
   ]
-  deps = [ "//examples:dawn_sample_utils" ]
+  deps = [
+    "//examples:dawn_sample_utils",
+    "//third_party/libjpeg_turbo:libjpeg",
+  ]
 }

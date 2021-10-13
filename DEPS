@@ -95,6 +95,11 @@ deps = {
     'condition': 'dawn_standalone',
   },
 
+  'third_party/nasm':
+      '{chromium_git}/chromium/deps/nasm.git@335fe83e133e1a113e87994e000b062047c662fc',
+  'third_party/libjpeg_turbo':
+      '{chromium_git}/chromium/deps/libjpeg_turbo.git@49836d72bd22c7a78bc0250483f04162278cdc6a',
+
   # WGSL support
   'third_party/tint': {
     'url': '{dawn_git}/tint@71763c84c2fa8f1585cf433f6cfb424265930e04',
